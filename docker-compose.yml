@@ -1,0 +1,14 @@
+services:
+ my-project.mongo:
+    image: mongo
+    restart: always
+    container_name: my-project
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    ports:
+      - 27017:27017
+
+    volumes:
+      - ./mongo-data:/data/db
+    command: --wiredTigerCacheSizeGB 1.5
