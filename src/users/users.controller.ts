@@ -3,18 +3,16 @@ import {
   ConflictException,
   Controller,
   Get,
-  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-users.dto';
-import { UsersService, UserSummary } from './users.service';
-import { ParseObjectIdPipe } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
+import { UsersService } from './users.service';
 import { JwtAdminAuthGuard } from '../auth/guards/jwt-admin-auth.guard';
 import { JwtUserAuthGuard } from '../auth/guards/jwt-user-auth.guard';
-import { UserIdMatchGuard } from './guards/userId-match-guard';
 import { Users } from './models/users.models';
+import { UserSummary } from '../common/types/user-summary';
+import { UserId } from 'src/common/decorators/user.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -40,10 +38,10 @@ export class UsersController {
     const result = await this.userService.findAll();
     return result;
   }
-  @UseGuards(JwtUserAuthGuard, UserIdMatchGuard)
-  @Get('read/:id')
-  readById(@Param('id', ParseObjectIdPipe) id: Types.ObjectId): Promise<Users> {
-    return this.userService.findById(id);
+  @UseGuards(JwtUserAuthGuard)
+  @Get('me')
+  readById(@UserId() userId: string): Promise<Users> {
+    return this.userService.findById(userId);
   }
   @Get('delete')
   async delete() {

@@ -1,21 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Users, UsersDocument } from './models/users.models';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-users.dto';
 import { hashSync } from 'bcryptjs';
-export interface UserSummary {
-  _id: string;
-  email: string;
-  name: string;
-  phone: string;
-  role: string;
-}
-
-export type test = {
-  id: string;
-};
+import { UserSummary } from '../common/types/user-summary';
 
 @Injectable()
 export class UsersService {
@@ -62,7 +52,7 @@ export class UsersService {
       );
     return res;
   }
-  async findById(id: Types.ObjectId): Promise<Users> {
+  async findById(id: string): Promise<Users> {
     const foundUser = await this.userModel
       .findById(id)
       .select('_id email name phone role')
