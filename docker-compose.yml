@@ -1,14 +1,27 @@
+version: '3.8'
+
 services:
- my-project.mongo:
+  my-project.mongo:
     image: mongo
-    restart: always
+    restart: unless-stopped
     container_name: my-project
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin
     ports:
       - 27017:27017
-
     volumes:
       - ./mongo-data:/data/db
     command: --wiredTigerCacheSizeGB 1.5
+
+  my-project.app:  
+    # image: top-api:latest
+    build: .
+    container_name: top-api
+    restart: unless-stopped
+    depends_on:
+      - my-project.mongo
+    ports:
+      - 3000:3000
+    environment:
+      NODE_ENV: production

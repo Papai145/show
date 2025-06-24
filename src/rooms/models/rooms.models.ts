@@ -10,6 +10,8 @@ export class Rooms {
   room: number;
   @Prop({ required: true, enum: RoomType })
   roomType: RoomType;
+  // @Prop({})
+  // picture: string;
 }
 
 export const RoomsSchema = SchemaFactory.createForClass(Rooms);
