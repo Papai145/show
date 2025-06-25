@@ -4,6 +4,8 @@ import { ScheduleService } from './schedule.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Schedule, ScheduleSchema } from './models/schedule.models';
 import { RoomsModule } from '../rooms/rooms.module';
+import { TelegramModule } from 'src/telegram/telegram.module';
+import { UsersModule } from 'src/users/users.module';
 // import { PassportModule } from '@nestjs/passport';
 
 @Module({
@@ -14,7 +16,8 @@ import { RoomsModule } from '../rooms/rooms.module';
       { name: Schedule.name, schema: ScheduleSchema },
     ]),
     RoomsModule,
-    // PassportModule,
+    TelegramModule,
+    UsersModule,
   ],
 })
 export class ScheduleModule {}
