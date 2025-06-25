@@ -22,6 +22,7 @@ import { UserId } from '../common/decorators/user.decorator';
 import { UpdateSchedule } from './dto/update.schedule.dto';
 import { DateDto } from './dto/date.dto';
 import { JwtAdminAuthGuard } from 'src/auth/guards/jwt-admin-auth.guard';
+import { PopulatedSchedule } from './types/answer.createSchedule';
 
 @Controller('schedule')
 export class ScheduleController {
@@ -40,7 +41,7 @@ export class ScheduleController {
     @Param() roomId: IdParamDto,
     @Body() dateObj: DateDto,
     @UserId() userId: string,
-  ): Promise<ScheduleDocument | void> {
+  ): Promise<PopulatedSchedule | void> {
     return this.scheduleService.createSchedule(roomId.id, userId, dateObj.date);
   }
 
@@ -61,11 +62,11 @@ export class ScheduleController {
 
   @UseGuards(JwtUserAuthGuard)
   @Delete('deleteBooking/:id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  // @HttpCode(HttpStatus.NO_CONTENT)
   async deleteBooking(
     @Param() scheduleId: IdParamDto,
     @UserId() userId: string,
-  ): Promise<{ roomId: string; startDay: string }> {
+  ): Promise<PopulatedSchedule> {
     const result = await this.scheduleService.deletingBooking(
       scheduleId.id,
       userId,

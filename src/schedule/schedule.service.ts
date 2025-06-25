@@ -2,19 +2,24 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { Schedule, ScheduleDocument } from './models/schedule.models';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Rooms, RoomsDocument } from '../rooms/models/rooms.models';
-import { RoomType } from 'src/common/enums/room-type';
+import { TelegramService } from 'src/telegram/telegram.service';
+import { UsersService } from 'src/users/users.service';
+import { PopulatedSchedule } from './types/answer.createSchedule';
 
 @Injectable()
 export class ScheduleService {
   constructor(
     @InjectModel(Schedule.name) private ScheduleModel: Model<ScheduleDocument>,
     @InjectModel(Rooms.name) private RoomsModel: Model<RoomsDocument>,
+    private readonly telegramService: TelegramService,
+    private readonly userService: UsersService,
   ) {}
 
   async getStatisticsByMonth(month: number): Promise<any[]> {
@@ -83,19 +88,39 @@ export class ScheduleService {
     roomId: string,
     userId: string,
     bookingDate: string,
-  ): Promise<ScheduleDocument> {
-    if (!(await this.RoomsModel.exists({ _id: roomId }))) {
+  ): Promise<PopulatedSchedule> {
+    if (!(await this.RoomsModel.exists({ _id: roomId }).exec())) {
       throw new BadRequestException('The identifier does not exist');
     }
+
     if (await this.IsRoomBooked(roomId, bookingDate)) {
       throw new ConflictException('Room is already booked for this date');
     }
+
     const newSchedule = new this.ScheduleModel({
       roomId: roomId,
       userId: userId,
       startDay: bookingDate,
     });
-    return await newSchedule.save();
+
+    try {
+      const savedSchedule = await newSchedule.save();
+      const populatedSchedule = await savedSchedule.populate<{
+        userId: { name: string; phone: string };
+        roomId: { room: number };
+      }>([
+        { path: 'userId', select: 'name phone -_id' },
+        { path: 'roomId', select: 'room -_id' },
+      ]);
+
+      await this.telegramService.sendMessage(
+        `Комната ${populatedSchedule.roomId.room} забронирована на ${populatedSchedule.startDay} клиентом ${populatedSchedule.userId.name}. Телефон: ${populatedSchedule.userId.phone}`,
+      );
+
+      return populatedSchedule;
+    } catch {
+      throw new InternalServerErrorException('Failed to create schedule');
+    }
   }
   async UpdateBookingDate(
     scheduleId: string,
@@ -130,17 +155,33 @@ export class ScheduleService {
   async deletingBooking(
     bookingId: string,
     userId: string,
-  ): Promise<{ roomId: string; startDay: string }> {
-    const deletedSchedule = await this.ScheduleModel.findOneAndDelete(
-      {
-        _id: bookingId,
-        userId: userId,
-      },
-      { projection: { roomId: 1, startDay: 1 } },
-    ).exec();
+  ): Promise<PopulatedSchedule> {
+    const deletedSchedule = await this.ScheduleModel.findOneAndDelete({
+      _id: bookingId,
+      userId: userId,
+    })
+      .exec()
+      .then((doc) => {
+        if (!doc) {
+          return null;
+        }
+        return doc.populate<{
+          userId: { name: string; phone: string };
+          roomId: { room: number };
+        }>([
+          { path: 'userId', select: 'name phone -_id' },
+          { path: 'roomId', select: 'room -_id' },
+        ]);
+      });
+
     if (!deletedSchedule) {
       throw new NotFoundException(`Schedule with ID ${bookingId} not found`);
     }
+
+    await this.telegramService.sendMessage(
+      `Запись комнаты  ${deletedSchedule.roomId.room} удалена на число ${deletedSchedule.startDay}  клиентом ${deletedSchedule.userId.name}. Телефон: ${deletedSchedule.userId.phone}`,
+    );
+
     return deletedSchedule;
   }
   async getOccupiedDatesByRoomId(): Promise<ScheduleDocument[]> {
